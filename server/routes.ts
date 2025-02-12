@@ -16,15 +16,12 @@ export function registerRoutes(app: Express): Server {
 
       // 1. Call Gemini API
       const geminiResponse = await axios.post(
-        'https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generateText',
+        `https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generateText?key=${GEMINI_API_KEY}`,
         {
           prompt: { text },
           temperature: 1,
           candidateCount: 1,
           maxOutputTokens: 1024,
-        },
-        {
-          headers: { Authorization: `Bearer ${GEMINI_API_KEY}` },
         }
       );
 
