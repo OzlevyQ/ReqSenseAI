@@ -2,12 +2,18 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import axios from "axios";
+import { Groq } from "groq-sdk";
 import { analyzeRequestSchema, type AnalyzeResponse } from "@shared/schema";
 
 // API Keys from environment variables
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+
+// Initialize Groq client
+const groq = new Groq({
+  apiKey: GROQ_API_KEY,
+});
 
 export function registerRoutes(app: Express): Server {
   app.post('/api/analyze', async (req, res) => {
@@ -34,20 +40,14 @@ export function registerRoutes(app: Express): Server {
         }
       );
 
-      // 2. Call Groq API with corrected endpoint
-      const groqResponse = await axios.post(
-        'https://api.groq.com/v1/chat/completions',
-        {
-          messages: [{ role: 'user', content: text }],
-          model: 'llama-3.3-70b-versatile',
-          temperature: 1,
-          max_completion_tokens: 1024,
-          top_p: 1,
-        },
-        {
-          headers: { Authorization: `Bearer ${GROQ_API_KEY}` },
-        }
-      );
+      // 2. Call Groq API using SDK
+      const groqCompletion = await groq.chat.completions.create({
+        messages: [{ role: 'user', content: text }],
+        model: "llama-3.3-70b-versatile",
+        temperature: 1,
+        max_tokens: 1024,
+        top_p: 1,
+      });
 
       // 3. Call Deepseek API
       const deepseekResponse = await axios.post(
@@ -67,7 +67,7 @@ export function registerRoutes(app: Express): Server {
       // Extract responses with proper error handling
       const results = {
         gemini: geminiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from Gemini',
-        groq: groqResponse.data.choices?.[0]?.message?.content || 'No response from Groq',
+        groq: groqCompletion.choices[0]?.message?.content || 'No response from Groq',
         deepseek: deepseekResponse.data.choices?.[0]?.message?.content || 'No response from Deepseek',
       };
 
