@@ -4,10 +4,10 @@ import { storage } from "./storage";
 import axios from "axios";
 import { analyzeRequestSchema, type AnalyzeResponse } from "@shared/schema";
 
-// API Keys
-const GEMINI_API_KEY = 'AIzaSyDQUQfKvQJ5FCVFBXe5YGDMKTjcBSi06SQ';
-const GROQ_API_KEY = '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';
-const DEEPSEEK_API_KEY = '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';
+// API Keys from environment variables
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
 export function registerRoutes(app: Express): Server {
   app.post('/api/analyze', async (req, res) => {
@@ -70,6 +70,15 @@ export function registerRoutes(app: Express): Server {
       - **Groq**: ${results.groq}\n
       - **Deepseek**: ${results.deepseek}`;
 
+      // Store the analysis in the database
+      await storage.createAnalysis({
+        inputText: text,
+        geminiResponse: results.gemini,
+        groqResponse: results.groq,
+        deepseekResponse: results.deepseek,
+        finalAnalysis,
+      });
+
       const response: AnalyzeResponse = { results, finalAnalysis };
       res.json(response);
 
@@ -79,6 +88,17 @@ export function registerRoutes(app: Express): Server {
         error: "Error analyzing text",
         details: error.response?.data?.error || error.message 
       });
+    }
+  });
+
+  // Get recent analyses
+  app.get('/api/analyses', async (_req, res) => {
+    try {
+      const analyses = await storage.getRecentAnalyses();
+      res.json(analyses);
+    } catch (error: any) {
+      console.error('Error fetching analyses:', error);
+      res.status(500).json({ error: "Error fetching analyses" });
     }
   });
 
