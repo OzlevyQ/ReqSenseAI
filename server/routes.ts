@@ -34,9 +34,9 @@ export function registerRoutes(app: Express): Server {
         }
       );
 
-      // 2. Call Groq API
+      // 2. Call Groq API with corrected endpoint
       const groqResponse = await axios.post(
-        'https://api.groq.ai/chat/completions',
+        'https://api.groq.com/v1/chat/completions',
         {
           messages: [{ role: 'user', content: text }],
           model: 'llama-3.3-70b-versatile',
