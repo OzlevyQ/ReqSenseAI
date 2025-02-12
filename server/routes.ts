@@ -16,12 +16,21 @@ export function registerRoutes(app: Express): Server {
 
       // 1. Call Gemini API
       const geminiResponse = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generateText?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
         {
-          prompt: { text },
-          temperature: 1,
-          candidateCount: 1,
-          maxOutputTokens: 1024,
+          contents: [
+            {
+              parts: [
+                {
+                  text: text
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+          }
         }
       );
 
@@ -55,11 +64,11 @@ export function registerRoutes(app: Express): Server {
         }
       );
 
-      // Combine results
+      // Extract responses with proper error handling
       const results = {
-        gemini: geminiResponse.data.candidates[0]?.output || 'No response from Gemini',
-        groq: groqResponse.data.choices[0]?.message?.content || 'No response from Groq',
-        deepseek: deepseekResponse.data.choices[0]?.message?.content || 'No response from Deepseek',
+        gemini: geminiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from Gemini',
+        groq: groqResponse.data.choices?.[0]?.message?.content || 'No response from Groq',
+        deepseek: deepseekResponse.data.choices?.[0]?.message?.content || 'No response from Deepseek',
       };
 
       const finalAnalysis = `### Analysis Results ###\n
