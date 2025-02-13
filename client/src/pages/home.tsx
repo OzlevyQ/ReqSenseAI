@@ -6,6 +6,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 export default function Home() {
   const [text, setText] = useState("");
@@ -75,62 +81,67 @@ export default function Home() {
     analyzeMutation.mutate(text);
   };
 
-  const renderMarkdown = () => {
+  const renderContent = () => {
     const sections = [];
 
     // Initial Analyses
     if (analysisResults["gemini-prompt"] || analysisResults["gemini-response"]) {
-      sections.push(`# שלב ראשון: ניתוח ראשוני\n\n`);
-
-      if (analysisResults["gemini-prompt"]) {
-        sections.push(`## Gemini Model ▼\n### הפרומפט:\n${analysisResults["gemini-prompt"]}\n\n`);
-      }
-      if (analysisResults["gemini-response"]) {
-        sections.push(`### התשובה:\n${analysisResults["gemini-response"]}\n\n`);
-      }
-    }
-
-    if (analysisResults["groq-prompt"] || analysisResults["groq-response"]) {
-      sections.push(`## Groq Model ▼\n### הפרומפט:\n${analysisResults["groq-prompt"] || ''}\n\n`);
-      if (analysisResults["groq-response"]) {
-        sections.push(`### התשובה:\n${analysisResults["groq-response"]}\n\n`);
-      }
-    }
-
-    if (analysisResults["deepseek-prompt"] || analysisResults["deepseek-response"]) {
-      sections.push(`## Deepseek Model ▼\n### הפרומפט:\n${analysisResults["deepseek-prompt"] || ''}\n\n`);
-      if (analysisResults["deepseek-response"]) {
-        sections.push(`### התשובה:\n${analysisResults["deepseek-response"]}\n\n`);
-      }
+      sections.push({
+        title: "שלב ראשון: ניתוח ראשוני",
+        items: [
+          {
+            title: "Gemini Model",
+            prompt: analysisResults["gemini-prompt"],
+            response: analysisResults["gemini-response"]
+          },
+          {
+            title: "Groq Model",
+            prompt: analysisResults["groq-prompt"],
+            response: analysisResults["groq-response"]
+          },
+          {
+            title: "Deepseek Model",
+            prompt: analysisResults["deepseek-prompt"],
+            response: analysisResults["deepseek-response"]
+          }
+        ]
+      });
     }
 
     // Systems Engineering Analysis
     if (analysisResults["systems-eng-prompt"] || analysisResults["systems-eng-response"]) {
-      sections.push(`# שלב שני: ניתוח הנדסי\n\n`);
-      sections.push(`## ניתוח דרישות מערכת ▼\n### הפרומפט:\n${analysisResults["systems-eng-prompt"] || ''}\n\n`);
-      if (analysisResults["systems-eng-response"]) {
-        sections.push(`### התשובה:\n${analysisResults["systems-eng-response"]}\n\n`);
-      }
-    }
-
-    // Design Engineering Review
-    if (analysisResults["design-eng-prompt"] || analysisResults["design-eng-response"]) {
-      sections.push(`## סקירת מגבלות תכן ▼\n### הפרומפט:\n${analysisResults["design-eng-prompt"] || ''}\n\n`);
-      if (analysisResults["design-eng-response"]) {
-        sections.push(`### התשובה:\n${analysisResults["design-eng-response"]}\n\n`);
-      }
+      sections.push({
+        title: "שלב שני: ניתוח הנדסי",
+        items: [
+          {
+            title: "ניתוח דרישות מערכת",
+            prompt: analysisResults["systems-eng-prompt"],
+            response: analysisResults["systems-eng-response"]
+          },
+          {
+            title: "סקירת מגבלות תכן",
+            prompt: analysisResults["design-eng-prompt"],
+            response: analysisResults["design-eng-response"]
+          }
+        ]
+      });
     }
 
     // Product Management Summary
     if (analysisResults["pm-prompt"] || analysisResults["pm-response"]) {
-      sections.push(`# שלב שלישי: מסמך דרישות סופי\n\n`);
-      sections.push(`## מסמך פורמלי ▼\n### הפרומפט:\n${analysisResults["pm-prompt"] || ''}\n\n`);
-      if (analysisResults["pm-response"]) {
-        sections.push(`### התשובה:\n${analysisResults["pm-response"]}\n\n`);
-      }
+      sections.push({
+        title: "שלב שלישי: מסמך דרישות סופי",
+        items: [
+          {
+            title: "מסמך פורמלי",
+            prompt: analysisResults["pm-prompt"],
+            response: analysisResults["pm-response"]
+          }
+        ]
+      });
     }
 
-    return sections.join('');
+    return sections;
   };
 
   return (
@@ -174,69 +185,44 @@ export default function Home() {
           <CardHeader>
             <CardTitle>תוצאות הניתוח</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="prose prose-lg max-w-none dark:prose-invert analysis-content">
-              <ReactMarkdown
-                components={{
-                  h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-8 mb-4" {...props} />,
-                  h2: ({node, ...props}) => (
-                    <div 
-                      className="text-xl font-semibold mt-6 mb-3 cursor-pointer flex items-center gap-2 model-header"
-                      onClick={(e) => {
-                        const content = e.currentTarget.nextElementSibling;
-                        if (content) {
-                          content.classList.toggle('hidden');
-                        }
-                      }}
-                      {...props}
-                    />
-                  ),
-                  h3: ({node, ...props}) => <h3 className="text-lg font-medium my-2" {...props} />,
-                  p: ({node, ...props}) => <p className="my-2 text-base leading-relaxed" {...props} />,
-                }}
-              >
-                {renderMarkdown()}
-              </ReactMarkdown>
-            </div>
+          <CardContent className="space-y-6">
+            {renderContent().map((section, sectionIdx) => (
+              <div key={sectionIdx} className="space-y-4">
+                <h2 className="text-2xl font-bold text-primary">{section.title}</h2>
+                <Accordion type="single" collapsible className="w-full">
+                  {section.items.map((item, itemIdx) => (
+                    <AccordionItem value={`${sectionIdx}-${itemIdx}`} key={itemIdx}>
+                      <AccordionTrigger className="text-xl font-semibold">
+                        {item.title}
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4">
+                        {item.prompt && (
+                          <div className="bg-muted/50 p-4 rounded-lg">
+                            <h3 className="text-lg font-medium mb-2">הפרומפט:</h3>
+                            <div className="text-sm text-muted-foreground">
+                              {item.prompt}
+                            </div>
+                          </div>
+                        )}
+                        {item.response && (
+                          <div className="bg-card p-4 rounded-lg border">
+                            <h3 className="text-lg font-medium mb-2">התשובה:</h3>
+                            <div className="prose prose-sm max-w-none dark:prose-invert">
+                              <ReactMarkdown>
+                                {item.response}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
+            ))}
           </CardContent>
         </Card>
       )}
-
-      <style jsx global>{`
-        .analysis-content {
-          direction: ltr;
-        }
-
-        .model-header {
-          padding: 0.5rem;
-          border-radius: 0.375rem;
-          background-color: #f3f4f6;
-          transition: background-color 0.2s;
-          direction: rtl;
-        }
-
-        .model-header:hover {
-          background-color: #e5e7eb;
-        }
-
-        .model-header::after {
-          content: "▼";
-          margin-right: 0.5rem;
-          display: inline-block;
-        }
-
-        .model-header + * {
-          margin-top: 0.5rem;
-          padding: 1rem;
-          border-radius: 0.375rem;
-          background-color: #f9fafb;
-        }
-
-        .model-header + * h3,
-        .model-header + * p {
-          direction: auto;
-        }
-      `}</style>
     </div>
   );
 }
