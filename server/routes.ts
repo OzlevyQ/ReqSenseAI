@@ -77,7 +77,7 @@ export function registerRoutes(app: Express): Server {
 
 Initial Analyses:
 ${Object.entries(initialResults).map(([model, analysis]) => `
-### ${model.toUpperCase()} Analysis
+${model.toUpperCase()} Analysis:
 ${analysis}
 `).join('\n')}`;
 
@@ -124,47 +124,31 @@ ${designEngResponse.choices[0]?.message?.content || 'No review'}`;
         }
       );
 
-      // Format final response with collapsible sections
+      // Format final response with a cleaner, document-style format
       const finalAnalysis = `
-## Initial Analyses
-<details>
-<summary>Gemini Analysis</summary>
+# שלב ראשון: ניתוח ראשוני
 
+## Gemini Model ▼
 ${initialResults.gemini}
-</details>
 
-<details>
-<summary>Groq Analysis</summary>
-
+## Groq Model ▼
 ${initialResults.groq}
-</details>
 
-<details>
-<summary>Deepseek Analysis</summary>
-
+## Deepseek Model ▼
 ${initialResults.deepseek}
-</details>
 
-## Systems Engineering Analysis
-<details>
-<summary>Functional and Non-Functional Requirements (INCOSE)</summary>
+# שלב שני: ניתוח הנדסי
 
+## ניתוח דרישות מערכת ▼
 ${systemsEngResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No analysis'}
-</details>
 
-## Design Engineering Review
-<details>
-<summary>Design Constraints and Limitations</summary>
-
+## סקירת מגבלות תכן ▼
 ${designEngResponse.choices[0]?.message?.content || 'No review'}
-</details>
 
-## Final Product Requirements Document
-<details>
-<summary>Formal Documentation</summary>
+# שלב שלישי: מסמך דרישות סופי
 
-${pmResponse.data.choices?.[0]?.message?.content || 'No summary'}
-</details>`;
+## מסמך פורמלי ▼
+${pmResponse.data.choices?.[0]?.message?.content || 'No summary'}`;
 
       // Store the analysis in the database
       await storage.createAnalysis({

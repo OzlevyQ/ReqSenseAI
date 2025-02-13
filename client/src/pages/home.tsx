@@ -82,14 +82,60 @@ export default function Home() {
             <CardTitle>תוצאות הניתוח</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="prose prose-sm max-w-none dark:prose-invert">
-              <ReactMarkdown>
+            <div className="prose prose-lg max-w-none dark:prose-invert analysis-content">
+              <ReactMarkdown
+                components={{
+                  h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-8 mb-4" {...props} />,
+                  h2: ({node, ...props}) => (
+                    <div 
+                      className="text-xl font-semibold mt-6 mb-3 cursor-pointer flex items-center gap-2 model-header"
+                      onClick={(e) => {
+                        const content = e.currentTarget.nextElementSibling;
+                        if (content) {
+                          content.classList.toggle('hidden');
+                        }
+                      }}
+                      {...props}
+                    />
+                  ),
+                  p: ({node, ...props}) => <p className="my-2 text-base leading-relaxed" {...props} />,
+                }}
+              >
                 {analyzeMutation.data.finalAnalysis}
               </ReactMarkdown>
             </div>
           </CardContent>
         </Card>
       )}
+
+      <style jsx global>{`
+        .analysis-content {
+          direction: ltr;
+        }
+
+        .model-header {
+          padding: 0.5rem;
+          border-radius: 0.375rem;
+          background-color: #f3f4f6;
+          transition: background-color 0.2s;
+        }
+
+        .model-header:hover {
+          background-color: #e5e7eb;
+        }
+
+        .model-header::after {
+          content: "▼";
+          margin-left: 0.5rem;
+        }
+
+        .model-header + * {
+          margin-top: 0.5rem;
+          padding: 1rem;
+          border-radius: 0.375rem;
+          background-color: #f9fafb;
+        }
+      `}</style>
     </div>
   );
 }
