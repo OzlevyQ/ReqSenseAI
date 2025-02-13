@@ -199,7 +199,7 @@ export default function Home() {
                         {item.prompt && (
                           <div className="bg-muted/50 p-4 rounded-lg">
                             <h3 className="text-lg font-medium mb-2">הפרומפט:</h3>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-muted-foreground text-left">
                               {item.prompt}
                             </div>
                           </div>
@@ -207,7 +207,7 @@ export default function Home() {
                         {item.response && (
                           <div className="bg-card p-4 rounded-lg border">
                             <h3 className="text-lg font-medium mb-2">התשובה:</h3>
-                            <div className="prose prose-sm max-w-none dark:prose-invert">
+                            <div className="prose prose-sm max-w-none dark:prose-invert text-left">
                               <ReactMarkdown>
                                 {item.response}
                               </ReactMarkdown>
@@ -223,6 +223,15 @@ export default function Home() {
           </CardContent>
         </Card>
       )}
+
+      <style jsx global>{`
+        .prose {
+          direction: ltr;
+        }
+        .text-left {
+          text-align: left;
+        }
+      `}</style>
     </div>
   );
 }
