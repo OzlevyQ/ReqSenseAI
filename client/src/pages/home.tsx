@@ -5,18 +5,53 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
-import { type AnalyzeResponse } from "@shared/schema";
 import ReactMarkdown from 'react-markdown';
 
 export default function Home() {
   const [text, setText] = useState("");
+  const [analysisResults, setAnalysisResults] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
 
   const analyzeMutation = useMutation({
     mutationFn: async (text: string) => {
-      const res = await apiRequest("POST", "/api/analyze", { text });
-      return res.json() as Promise<AnalyzeResponse>;
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No reader available');
+
+      setAnalysisResults({}); // Clear previous results
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(5));
+              setAnalysisResults(prev => ({
+                ...prev,
+                [data.phase]: data.content
+              }));
+            } catch (e) {
+              console.error('Error parsing SSE data:', e);
+            }
+          }
+        }
+      }
     },
     onError: (error) => {
       toast({
@@ -38,6 +73,64 @@ export default function Home() {
       return;
     }
     analyzeMutation.mutate(text);
+  };
+
+  const renderMarkdown = () => {
+    const sections = [];
+
+    // Initial Analyses
+    if (analysisResults["gemini-prompt"] || analysisResults["gemini-response"]) {
+      sections.push(`# שלב ראשון: ניתוח ראשוני\n\n`);
+
+      if (analysisResults["gemini-prompt"]) {
+        sections.push(`## Gemini Model ▼\n### הפרומפט:\n${analysisResults["gemini-prompt"]}\n\n`);
+      }
+      if (analysisResults["gemini-response"]) {
+        sections.push(`### התשובה:\n${analysisResults["gemini-response"]}\n\n`);
+      }
+    }
+
+    if (analysisResults["groq-prompt"] || analysisResults["groq-response"]) {
+      sections.push(`## Groq Model ▼\n### הפרומפט:\n${analysisResults["groq-prompt"] || ''}\n\n`);
+      if (analysisResults["groq-response"]) {
+        sections.push(`### התשובה:\n${analysisResults["groq-response"]}\n\n`);
+      }
+    }
+
+    if (analysisResults["deepseek-prompt"] || analysisResults["deepseek-response"]) {
+      sections.push(`## Deepseek Model ▼\n### הפרומפט:\n${analysisResults["deepseek-prompt"] || ''}\n\n`);
+      if (analysisResults["deepseek-response"]) {
+        sections.push(`### התשובה:\n${analysisResults["deepseek-response"]}\n\n`);
+      }
+    }
+
+    // Systems Engineering Analysis
+    if (analysisResults["systems-eng-prompt"] || analysisResults["systems-eng-response"]) {
+      sections.push(`# שלב שני: ניתוח הנדסי\n\n`);
+      sections.push(`## ניתוח דרישות מערכת ▼\n### הפרומפט:\n${analysisResults["systems-eng-prompt"] || ''}\n\n`);
+      if (analysisResults["systems-eng-response"]) {
+        sections.push(`### התשובה:\n${analysisResults["systems-eng-response"]}\n\n`);
+      }
+    }
+
+    // Design Engineering Review
+    if (analysisResults["design-eng-prompt"] || analysisResults["design-eng-response"]) {
+      sections.push(`## סקירת מגבלות תכן ▼\n### הפרומפט:\n${analysisResults["design-eng-prompt"] || ''}\n\n`);
+      if (analysisResults["design-eng-response"]) {
+        sections.push(`### התשובה:\n${analysisResults["design-eng-response"]}\n\n`);
+      }
+    }
+
+    // Product Management Summary
+    if (analysisResults["pm-prompt"] || analysisResults["pm-response"]) {
+      sections.push(`# שלב שלישי: מסמך דרישות סופי\n\n`);
+      sections.push(`## מסמך פורמלי ▼\n### הפרומפט:\n${analysisResults["pm-prompt"] || ''}\n\n`);
+      if (analysisResults["pm-response"]) {
+        sections.push(`### התשובה:\n${analysisResults["pm-response"]}\n\n`);
+      }
+    }
+
+    return sections.join('');
   };
 
   return (
@@ -76,7 +169,7 @@ export default function Home() {
         </CardContent>
       </Card>
 
-      {analyzeMutation.data && (
+      {Object.keys(analysisResults).length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>תוצאות הניתוח</CardTitle>
@@ -98,10 +191,11 @@ export default function Home() {
                       {...props}
                     />
                   ),
+                  h3: ({node, ...props}) => <h3 className="text-lg font-medium my-2" {...props} />,
                   p: ({node, ...props}) => <p className="my-2 text-base leading-relaxed" {...props} />,
                 }}
               >
-                {analyzeMutation.data.finalAnalysis}
+                {renderMarkdown()}
               </ReactMarkdown>
             </div>
           </CardContent>
@@ -118,6 +212,7 @@ export default function Home() {
           border-radius: 0.375rem;
           background-color: #f3f4f6;
           transition: background-color 0.2s;
+          direction: rtl;
         }
 
         .model-header:hover {
@@ -126,7 +221,8 @@ export default function Home() {
 
         .model-header::after {
           content: "▼";
-          margin-left: 0.5rem;
+          margin-right: 0.5rem;
+          display: inline-block;
         }
 
         .model-header + * {
@@ -134,6 +230,11 @@ export default function Home() {
           padding: 1rem;
           border-radius: 0.375rem;
           background-color: #f9fafb;
+        }
+
+        .model-header + * h3,
+        .model-header + * p {
+          direction: auto;
         }
       `}</style>
     </div>
