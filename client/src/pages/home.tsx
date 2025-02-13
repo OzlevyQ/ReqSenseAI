@@ -16,6 +16,7 @@ import {
 export default function Home() {
   const [text, setText] = useState("");
   const [analysisResults, setAnalysisResults] = useState<{[key: string]: string}>({});
+  const [downloadLink, setDownloadLink] = useState(''); // Added state for download link
   const { toast } = useToast();
 
   const analyzeMutation = useMutation({
@@ -48,10 +49,14 @@ export default function Home() {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(5));
-              setAnalysisResults(prev => ({
-                ...prev,
-                [data.phase]: data.content
-              }));
+              if (data.phase === "download-ready") {
+                setDownloadLink(data.downloadUrl); // Set download link
+              } else {
+                setAnalysisResults(prev => ({
+                  ...prev,
+                  [data.phase]: data.content
+                }));
+              }
             } catch (e) {
               console.error('Error parsing SSE data:', e);
             }
@@ -222,6 +227,15 @@ export default function Home() {
             ))}
           </CardContent>
         </Card>
+      )}
+
+      {/* Added Download Button */}
+      {downloadLink && (
+        <div className="mt-8">
+          <a href={downloadLink} download="analysis_report.docx" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            הורד דוח DOCX
+          </a>
+        </div>
       )}
 
       <style jsx global>{`

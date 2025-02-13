@@ -166,6 +166,45 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.get('/api/download-report/:analysisId', async (req, res) => {
+    try {
+      const analysis = await storage.getAnalysis(req.params.analysisId);
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found' });
+      }
+
+      const { Document, Paragraph, TextRun } = require('docx');
+
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({ text: "Formal Analysis Report", bold: true, size: 32 }),
+              ],
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              children: [new TextRun({ text: analysis.finalAnalysis })],
+            }),
+          ],
+        }],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', 'attachment; filename=analysis-report.docx');
+      res.send(buffer);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      res.status(500).json({ error: 'Error generating report' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
