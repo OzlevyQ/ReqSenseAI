@@ -20,41 +20,101 @@ export function registerRoutes(app: Express): Server {
     try {
       const { text } = analyzeRequestSchema.parse(req.body);
 
-      // 1. Call Gemini API
-      const geminiResponse = await axios.post(
+      // Phase 1: Initial Analysis by all models
+      const [geminiInitial, groqInitial, deepseekInitial] = await Promise.all([
+        // 1. Gemini Initial Analysis
+        axios.post(
+          `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            contents: [{
+              parts: [{ text: `Analyze the following text and provide detailed insights:\n\n${text}` }]
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 1024,
+            }
+          }
+        ),
+
+        // 2. Groq Initial Analysis
+        groq.chat.completions.create({
+          messages: [{ 
+            role: 'user', 
+            content: `Analyze the following text and provide detailed insights:\n\n${text}` 
+          }],
+          model: "llama-3.3-70b-versatile",
+          temperature: 0.7,
+          max_tokens: 1024,
+        }),
+
+        // 3. Deepseek Initial Analysis
+        axios.post(
+          'https://openrouter.ai/api/v1/chat/completions',
+          {
+            model: 'deepseek/deepseek-r1-distill-llama-70b:free',
+            messages: [{ 
+              role: 'user', 
+              content: `Analyze the following text and provide detailed insights:\n\n${text}` 
+            }],
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        )
+      ]);
+
+      const initialResults = {
+        gemini: geminiInitial.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response',
+        groq: groqInitial.choices[0]?.message?.content || 'No response',
+        deepseek: deepseekInitial.data.choices?.[0]?.message?.content || 'No response',
+      };
+
+      // Phase 2: Systems Engineering Analysis (Gemini)
+      const systemsEngPrompt = `You are a systems engineer with 30 years of experience. Review these analyses and categorize the requirements into functional and non-functional categories according to INCOSE standards:
+
+Initial Analyses:
+${Object.entries(initialResults).map(([model, analysis]) => `
+### ${model.toUpperCase()} Analysis
+${analysis}
+`).join('\n')}`;
+
+      const systemsEngResponse = await axios.post(
         `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
         {
-          contents: [
-            {
-              parts: [
-                {
-                  text: text
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1024,
-          }
+          contents: [{ parts: [{ text: systemsEngPrompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
         }
       );
 
-      // 2. Call Groq API using SDK
-      const groqCompletion = await groq.chat.completions.create({
-        messages: [{ role: 'user', content: text }],
+      // Phase 3: Design Engineering Review (Groq)
+      const designEngPrompt = `You are a senior design engineer with 30 years of experience. Review these requirements and analyze them for design constraints (legal, physical, chemical, etc.):
+
+${systemsEngResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No systems engineering analysis available'}`;
+
+      const designEngResponse = await groq.chat.completions.create({
+        messages: [{ role: 'user', content: designEngPrompt }],
         model: "llama-3.3-70b-versatile",
-        temperature: 1,
+        temperature: 0.7,
         max_tokens: 1024,
-        top_p: 1,
       });
 
-      // 3. Call Deepseek API
-      const deepseekResponse = await axios.post(
+      // Phase 4: Product Management Summary (Deepseek)
+      const pmPrompt = `You are a senior product manager with 30 years of experience. Create a formal document summarizing all the analyses:
+
+Systems Engineering Analysis:
+${systemsEngResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No analysis'}
+
+Design Engineering Review:
+${designEngResponse.choices[0]?.message?.content || 'No review'}`;
+
+      const pmResponse = await axios.post(
         'https://openrouter.ai/api/v1/chat/completions',
         {
           model: 'deepseek/deepseek-r1-distill-llama-70b:free',
-          messages: [{ role: 'user', content: text }],
+          messages: [{ role: 'user', content: pmPrompt }],
         },
         {
           headers: {
@@ -64,30 +124,63 @@ export function registerRoutes(app: Express): Server {
         }
       );
 
-      // Extract responses with proper error handling
-      const results = {
-        gemini: geminiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from Gemini',
-        groq: groqCompletion.choices[0]?.message?.content || 'No response from Groq',
-        deepseek: deepseekResponse.data.choices?.[0]?.message?.content || 'No response from Deepseek',
-      };
+      // Format final response with collapsible sections
+      const finalAnalysis = `
+## Initial Analyses
+<details>
+<summary>Gemini Analysis</summary>
 
-      const finalAnalysis = `### Analysis Results ###\n
-      - **Gemini**: ${results.gemini}\n
-      - **Groq**: ${results.groq}\n
-      - **Deepseek**: ${results.deepseek}`;
+${initialResults.gemini}
+</details>
+
+<details>
+<summary>Groq Analysis</summary>
+
+${initialResults.groq}
+</details>
+
+<details>
+<summary>Deepseek Analysis</summary>
+
+${initialResults.deepseek}
+</details>
+
+## Systems Engineering Analysis
+<details>
+<summary>Functional and Non-Functional Requirements (INCOSE)</summary>
+
+${systemsEngResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No analysis'}
+</details>
+
+## Design Engineering Review
+<details>
+<summary>Design Constraints and Limitations</summary>
+
+${designEngResponse.choices[0]?.message?.content || 'No review'}
+</details>
+
+## Final Product Requirements Document
+<details>
+<summary>Formal Documentation</summary>
+
+${pmResponse.data.choices?.[0]?.message?.content || 'No summary'}
+</details>`;
 
       // Store the analysis in the database
       await storage.createAnalysis({
         inputText: text,
-        geminiResponse: results.gemini,
-        groqResponse: results.groq,
-        deepseekResponse: results.deepseek,
+        geminiResponse: initialResults.gemini,
+        groqResponse: initialResults.groq,
+        deepseekResponse: initialResults.deepseek,
         finalAnalysis,
       });
 
-      const response: AnalyzeResponse = { results, finalAnalysis };
-      res.json(response);
+      const response: AnalyzeResponse = {
+        results: initialResults,
+        finalAnalysis,
+      };
 
+      res.json(response);
     } catch (error: any) {
       console.error('Error:', error.response?.data || error.message);
       res.status(500).json({ 

@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { type AnalyzeResponse } from "@shared/schema";
+import ReactMarkdown from 'react-markdown';
 
 export default function Home() {
   const [text, setText] = useState("");
@@ -20,7 +21,7 @@ export default function Home() {
     onError: (error) => {
       toast({
         variant: "destructive",
-        title: "Error analyzing text",
+        title: "שגיאה בניתוח הטקסט",
         description: error.message,
       });
     },
@@ -31,8 +32,8 @@ export default function Home() {
     if (!text.trim()) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Please enter some text to analyze",
+        title: "שגיאה",
+        description: "נא להזין טקסט לניתוח",
       });
       return;
     }
@@ -40,21 +41,21 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8 max-w-4xl" dir="rtl">
       <h1 className="text-4xl font-bold text-center mb-8 bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">
-        Multi-Model AI Text Analysis
+        ניתוח טקסט באמצעות מודלים מרובים
       </h1>
 
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Enter Text to Analyze</CardTitle>
+          <CardTitle>הזן טקסט לניתוח</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Enter your text here..."
+              placeholder="הזן את הטקסט שלך כאן..."
               className="min-h-[200px]"
             />
             <Button 
@@ -65,10 +66,10 @@ export default function Home() {
               {analyzeMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analyzing...
+                  מנתח...
                 </>
               ) : (
-                "Analyze Text"
+                "נתח טקסט"
               )}
             </Button>
           </form>
@@ -78,20 +79,13 @@ export default function Home() {
       {analyzeMutation.data && (
         <Card>
           <CardHeader>
-            <CardTitle>Analysis Results</CardTitle>
+            <CardTitle>תוצאות הניתוח</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Gemini Analysis</h3>
-              <p className="text-gray-700">{analyzeMutation.data.results.gemini}</p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Groq Analysis</h3>
-              <p className="text-gray-700">{analyzeMutation.data.results.groq}</p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Deepseek Analysis</h3>
-              <p className="text-gray-700">{analyzeMutation.data.results.deepseek}</p>
+          <CardContent>
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+              <ReactMarkdown>
+                {analyzeMutation.data.finalAnalysis}
+              </ReactMarkdown>
             </div>
           </CardContent>
         </Card>
