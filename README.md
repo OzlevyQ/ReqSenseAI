@@ -39,17 +39,23 @@ A modern web application toolkit built with Node.js, React, and Express, featuri
 
 ## 🛠️ Setup
 
-1. Install dependencies:
+1. Clone the repository:
+```bash
+git clone https://github.com/OzlevyQ/ReqSenseAI.git
+cd ReqSenseAI
+```
+
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-2. Set up environment variables:
+3. Set up environment variables:
 ```bash
 cp .env.example .env
 ```
 
-3. Start development server:
+4. Start development server:
 ```bash
 npm run dev
 ```
