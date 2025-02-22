@@ -38,7 +38,7 @@ export function registerRoutes(app: Express): Server {
       sendUpdate("gemini-prompt", geminiPrompt);
 
       const geminiResponse = await axios.post(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
           contents: [{
             parts: [{ text: geminiPrompt }]
@@ -132,7 +132,7 @@ export function registerRoutes(app: Express): Server {
       const pmResult = pmResponse.data.choices?.[0]?.message?.content || 'No summary';
       sendUpdate("pm-response", pmResult);
 
-      // Store the complete analysis in the database
+      // Store the complete analysis
       await storage.createAnalysis({
         inputText: text,
         geminiResponse: geminiResult,
@@ -141,7 +141,6 @@ export function registerRoutes(app: Express): Server {
         finalAnalysis: `# Complete Analysis Document\n\n${systemsEngResult}\n\n${designEngResult}\n\n${pmResult}`,
       });
 
-      // End the stream
       sendUpdate("complete", "Analysis complete");
       res.end();
 
@@ -181,7 +180,7 @@ export function registerRoutes(app: Express): Server {
           children: [
             new Paragraph({
               children: [
-                new TextRun({ text: "Formal Analysis Report", bold: true, size: 32 }),
+                new TextRun({ text: "Requirements Analysis Report", bold: true, size: 32 }),
               ],
             }),
             new Paragraph({
