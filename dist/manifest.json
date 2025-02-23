@@ -1,0 +1,35 @@
+{
+  "short_name": "ReqSense AI",
+  "name": "AI Multi-Model Text Analyzer",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone", 
+  "theme_color": "#2563eb",
+  "background_color": "#f8fafc",
+  "orientation": "any",
+  "categories": ["productivity", "utilities"],
+  "description": "Multi-Model AI Text Analysis Tool",
+  "lang": "en-US",
+  "dir": "ltr",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ]
+}

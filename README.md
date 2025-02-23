@@ -87,4 +87,8 @@ npm run dev
 
 ## 📝 License
 
+<<<<<<< HEAD
 MIT
+=======
+MIT
+>>>>>>> e5af3a781ffa5e0b14aad8da645358985f60a29d
