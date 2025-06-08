@@ -1,4 +1,4 @@
-# Node Web Toolkit
+# Node Web Toolkit (archive)
 
 A modern web application toolkit built with Node.js, React, and Express, featuring a comprehensive set of tools and utilities for building robust web applications.
 
